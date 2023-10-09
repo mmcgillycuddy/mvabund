@@ -31,6 +31,10 @@ AnovaTest::AnovaTest(mv_Method *mm, gsl_matrix *Y, gsl_matrix *X,
   gsl_matrix_set_zero(Pstatj);
 
   bStatj = gsl_vector_alloc(nVars);
+  // bootStore = gsl_matrix_alloc(mmRef->nboot, nVars);
+  bootStore = NULL;
+  bootstatj = NULL;
+  
   Hats = (mv_mat *)malloc(nModels * sizeof(mv_mat));
   sortid =
       (gsl_permutation **)malloc((nModels - 1) * sizeof(gsl_permutation *));
@@ -118,6 +122,9 @@ void AnovaTest::releaseTest() {
     gsl_vector_free(Hats[i].sd);
   }
   gsl_vector_free(bStatj);
+  
+  gsl_vector_free(bootStore);
+  gsl_matrix_free(bootstatj);
 
   if (bootID != NULL)
     gsl_matrix_free(bootID);
@@ -170,6 +177,8 @@ int AnovaTest::resampTest(void) {
   gsl_matrix *bX, *bY;
   bY = gsl_matrix_alloc(nRows, nVars);
   bX = gsl_matrix_alloc(nRows, nParam);
+  
+  bootstatj = gsl_matrix_alloc(mmRef->nboot, nVars);
 
   // initialize permid
   unsigned int *permid = NULL;
@@ -185,6 +194,7 @@ int AnovaTest::resampTest(void) {
 
   // resampling options
   if (mmRef->resamp == CASEBOOT) {
+    bootStore = gsl_vector_alloc(maxiter);
     nSamp = 0;
     for (i = 0; i < maxiter; i++) {
       for (j = 0; j < nRows; j++) {
@@ -200,10 +210,12 @@ int AnovaTest::resampTest(void) {
         gsl_matrix_set_row(bX, j, &Xj.vector);
       }
       anovacase(bY, bX);
+      gsl_vector_set(bootStore, i, bMultStat);
       nSamp++;
     }
   } else if (mmRef->resamp == RESIBOOT) {
     nSamp = 0;
+    bootStore = gsl_vector_alloc(maxiter);
     for (i = 0; i < maxiter; i++) {
       for (p = 1; p < nModels; p++) {
         if (mmRef->reprand != TRUE) {
@@ -233,11 +245,13 @@ int AnovaTest::resampTest(void) {
         if (mmRef->reprand != TRUE)
           PutRNGstate();
         anovaresi(bY, p);
+        gsl_vector_set(bootStore, i, bMultStat);
       }
       nSamp++;
     }
   } else if (mmRef->resamp == SCOREBOOT) {
     nSamp = 0;
+    bootStore = gsl_vector_alloc(maxiter);
     for (i = 0; i < maxiter; i++) {
       for (p = 1; p < nModels; p++) {
         for (j = 0; j < nRows; j++) {
@@ -261,6 +275,7 @@ int AnovaTest::resampTest(void) {
           gsl_vector_add(&bootr.vector, &Fj.vector);
         }
         anovaresi(bY, p);
+        gsl_vector_set(bootStore, i, bMultStat);
       }
       nSamp++;
     }
@@ -269,6 +284,7 @@ int AnovaTest::resampTest(void) {
     for (p = 0; p < nModels - 1; p++)
       Pmultstat[p] = 1.0; // include itself
     nSamp = 1;
+    bootStore = gsl_vector_alloc(maxiter - 1);
     for (i = 0; i < maxiter - 1; i++) { // 999
       for (p = 1; p < nModels; p++) {
         if (bootID == NULL)
@@ -294,7 +310,10 @@ int AnovaTest::resampTest(void) {
           gsl_vector_add(&bootr.vector, &Yj.vector);
         }
         anovaresi(bY, p);
+        // gsl_vector_view bootStore = gsl_matrix_row(statj, p);
+        gsl_vector_set(bootStore, i, bMultStat);
       }
+      gsl_matrix_set_row(bootstatj, i, bStatj);
       nSamp++;
     }
   } else
@@ -392,6 +411,7 @@ int AnovaTest::anovaresi(gsl_matrix *bY, const unsigned int i) {
   double *sj = gsl_matrix_ptr(statj, aid, 0);
   double *pj = gsl_matrix_ptr(Pstatj, aid, 0);
   double *bj = gsl_vector_ptr(bStatj, 0);
+  
   calcAdjustP(mmRef->punit, nVars, bj, sj, pj, sortid[aid]);
 
   return 0;

@@ -17,7 +17,8 @@ anova.manylm <- function(object,
                         calc.rss = FALSE,
                         tol=1.0e-10,
                         rep.seed=FALSE,
-                        bootID=NULL) {
+                        bootID=NULL, 
+                        keep.boot = FALSE) {
     if(!any(class(object)=="manylm"))
        stop("The function 'anova.manylm' can only be used for a manylm object.")
 
@@ -248,10 +249,11 @@ anova.manylm <- function(object,
         ord <- (nModels-1):1
     }
 
-#browser()
+# browser()
     ######## call resampTest Rcpp #########
     # preprocess bootID for differnt resampling methods
     val <- RtoAnovaCpp(params, Y, X, XvarIn, bootID)
+# statj is response j statistic
 
     if (calc.rss) {
         RSS <- matrix(unlist(resdev),nrow=nModels,ncol=nVars,byrow=TRUE)
@@ -287,6 +289,8 @@ anova.manylm <- function(object,
     anova$uni.test <- matrix(ncol=nVars, nrow=nModels)
     anova$uni.p[2:nModels, ] <- val$Pstatj[ord,]
     anova$uni.test[2:nModels, ] <- val$statj[ord,]
+
+    if (keep.boot) anova$bootStat <- val$bootStat
 
     ########### formal displays #########
     # Title and model formulas

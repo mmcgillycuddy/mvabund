@@ -175,6 +175,11 @@ public:
   gsl_matrix *Pstatj;
   unsigned int *dfDiff;
   gsl_matrix *bootID;
+  gsl_vector *bStatj;
+
+  // store the bootstrap stats
+  gsl_vector *bootStore;
+  gsl_matrix *bootstatj;
 
   gsl_rng *rnd;
   // Methods
@@ -187,7 +192,7 @@ public:
 private:
   mv_mat *Hats;
   gsl_permutation **sortid;
-  gsl_vector *bStatj;
+  // gsl_vector *bStatj;
   double bMultStat;
   unsigned int nModels, nRows, nVars, nParam;
 

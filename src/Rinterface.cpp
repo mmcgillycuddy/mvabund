@@ -51,7 +51,10 @@ List RtoAnovaCpp(const List &rparam, RcppGSL::Matrix &Y, RcppGSL::Matrix &X,
 
   // resampling test
   anova.resampTest();
-  //    anova.display();
+     // anova.display();
+     
+     // displayvector(anova.bStatj, "bStatj");
+     // displaymatrix(anova.bootstatj, "bootstatj");
 
   // Wrap the gsl objects with Rcpp, then Rcpp -> R
   List rs = List::create(
@@ -62,7 +65,9 @@ List RtoAnovaCpp(const List &rparam, RcppGSL::Matrix &Y, RcppGSL::Matrix &X,
       Named("dfDiff") = NumericVector(anova.dfDiff, anova.dfDiff + nModels - 1),
       Named("statj") = RcppGSL::Matrix(anova.statj),
       Named("Pstatj") = RcppGSL::Matrix(anova.Pstatj),
-      Named("nSamp") = anova.nSamp);
+      Named("nSamp") = anova.nSamp,
+      Named("bootStat") = RcppGSL::Vector(anova.bootStore));
+      // Named("nSamp") = anova.nSamp);
 
   // clear objects
   anova.releaseTest();
@@ -127,6 +132,7 @@ List RtoGlmAnova(const List &sparam, const List &rparam, RcppGSL::Matrix &Y,
   glmPtr[mtype]->regression(Y, X, O, NULL);
   //    glmPtr[mtype]->display();
 
+  // initialize anova class for glm
   GlmTest myTest(&tm);
   // Resampling indices
   if (bID.isNotNull()) {

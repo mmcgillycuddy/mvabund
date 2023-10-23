@@ -31,8 +31,9 @@ AnovaTest::AnovaTest(mv_Method *mm, gsl_matrix *Y, gsl_matrix *X,
   gsl_matrix_set_zero(Pstatj);
 
   bStatj = gsl_vector_alloc(nVars);
+  // bootStore = gsl_matrix_alloc(mmRef->nboot, nVars);
   bootStore = NULL;
-  // bootstatj = NULL;
+  bootstatj = NULL;
   
   Hats = (mv_mat *)malloc(nModels * sizeof(mv_mat));
   sortid =
@@ -176,9 +177,9 @@ int AnovaTest::resampTest(void) {
   gsl_matrix *bX, *bY;
   bY = gsl_matrix_alloc(nRows, nVars);
   bX = gsl_matrix_alloc(nRows, nParam);
-  // bootstatj = gsl_matrix_alloc(mmRef->nboot, nVars);
-  nSamp = 0;
   
+  bootstatj = gsl_matrix_alloc(mmRef->nboot, nVars);
+
   // initialize permid
   unsigned int *permid = NULL;
   if (bootID == NULL) {
@@ -194,6 +195,7 @@ int AnovaTest::resampTest(void) {
   // resampling options
   if (mmRef->resamp == CASEBOOT) {
     bootStore = gsl_vector_alloc(maxiter);
+    nSamp = 0;
     for (i = 0; i < maxiter; i++) {
       for (j = 0; j < nRows; j++) {
         // resampling index
@@ -278,12 +280,11 @@ int AnovaTest::resampTest(void) {
       nSamp++;
     }
   } else if (mmRef->resamp == PERMUTE) {
+    gsl_matrix_add_constant(Pstatj, 1.0);
+    for (p = 0; p < nModels - 1; p++)
+      Pmultstat[p] = 1.0; // include itself
+    nSamp = 1;
     bootStore = gsl_vector_alloc(maxiter - 1);
-    // DW, 10/10/23: remove the 1+ on PERMUTE because this is already handled by adding data as first row
-    // gsl_matrix_add_constant(Pstatj, 1.0);
-    // for (p = 0; p < nModels - 1; p++)
-    //   Pmultstat[p] = 1.0; // include itself
-    // nSamp = 1;
     for (i = 0; i < maxiter - 1; i++) { // 999
       for (p = 1; p < nModels; p++) {
         if (bootID == NULL)
@@ -309,9 +310,10 @@ int AnovaTest::resampTest(void) {
           gsl_vector_add(&bootr.vector, &Yj.vector);
         }
         anovaresi(bY, p);
+        // gsl_vector_view bootStore = gsl_matrix_row(statj, p);
         gsl_vector_set(bootStore, i, bMultStat);
       }
-      // gsl_matrix_set_row(bootstatj, i, bStatj);
+      gsl_matrix_set_row(bootstatj, i, bStatj);
       nSamp++;
     }
   } else

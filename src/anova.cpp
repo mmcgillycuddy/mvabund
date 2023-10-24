@@ -280,10 +280,10 @@ int AnovaTest::resampTest(void) {
       nSamp++;
     }
   } else if (mmRef->resamp == PERMUTE) {
-    gsl_matrix_add_constant(Pstatj, 1.0);
-    for (p = 0; p < nModels - 1; p++)
-      Pmultstat[p] = 1.0; // include itself
-    nSamp = 1;
+    // gsl_matrix_add_constant(Pstatj, 1.0);
+    // for (p = 0; p < nModels - 1; p++)
+      // Pmultstat[p] = 1.0; // include itself
+    nSamp = 0;
     bootStore = gsl_vector_alloc(maxiter - 1);
     for (i = 0; i < maxiter - 1; i++) { // 999
       for (p = 1; p < nModels; p++) {
